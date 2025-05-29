@@ -21,4 +21,10 @@ public class MyBoardModel extends AbstractTableModel {
     public Object getValueAt(int rowIndex, int columnIndex) {
         return cellmodel.getCell(rowIndex, columnIndex);
     }
+
+    @Override
+    public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
+        cellmodel.setCell(rowIndex, columnIndex, (CellTypes) aValue);
+        fireTableCellUpdated(rowIndex, columnIndex);
+    }
 }
