@@ -5,6 +5,7 @@ import java.awt.*;
 public class CellRenderer extends JLabel implements TableCellRenderer {
 
     private final ImageIcon wallIcon;
+    private final ImageIcon foodIcon;
 
     public CellRenderer() {
         setOpaque(true);
@@ -12,6 +13,7 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
         setVerticalAlignment(CENTER);
 
         wallIcon = loadIcon("./resources/wall.png");
+        foodIcon = loadIcon("./resources/food.png");
     }
 
     private ImageIcon loadIcon(String path) {
@@ -46,6 +48,13 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
                 }
                 case EMPTY -> {
                     setBackground(Color.WHITE);
+                }
+                case FOOD -> {
+                    setBackground(Color.WHITE);
+                    if (foodIcon != null) {
+                        Image scaledImage = foodIcon.getImage().getScaledInstance(5, 5, Image.SCALE_SMOOTH);
+                        setIcon(new ImageIcon(scaledImage));
+                    }
                 }
                 case PACMAN -> {
                     setBackground(Color.YELLOW);

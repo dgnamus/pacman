@@ -27,4 +27,8 @@ public class MyBoardModel extends AbstractTableModel {
         cellmodel.setCell(rowIndex, columnIndex, (CellTypes) aValue);
         fireTableCellUpdated(rowIndex, columnIndex);
     }
+
+    public void updateScore(int points) {
+
+    }
 }

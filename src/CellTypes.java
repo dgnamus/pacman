@@ -1,3 +1,3 @@
 public enum CellTypes {
-    EMPTY, WALL, PACMAN, GHOST, UPGRADE
+    EMPTY, FOOD, WALL, PACMAN, GHOST, UPGRADE
 }
