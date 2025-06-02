@@ -28,7 +28,4 @@ public class MyBoardModel extends AbstractTableModel {
         fireTableCellUpdated(rowIndex, columnIndex);
     }
 
-    public void updateScore(int points) {
-
-    }
 }

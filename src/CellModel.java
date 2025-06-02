@@ -8,8 +8,8 @@ public class CellModel {
     private int lives = 3;
     private int points = 0;
 
-    public CellModel(int height, int width) {
-        board = new CellTypes[height][width];
+    public CellModel(int rows, int columns) {
+        board = new CellTypes[rows][columns];
         createBoard();
     }
 
@@ -22,19 +22,17 @@ public class CellModel {
             for (int j = 0; j < width; j++)
                 board[i][j] = CellTypes.WALL;
 
-        // Carve out corridors in every second row and column
+        // Every second row, all columns
         for (int i = 1; i < height - 1; i += 2) {
-            for (int j = 1; j < width - 1; j += 2) {
+            for (int j = 1; j < width - 1; j++) {
                 board[i][j] = CellTypes.FOOD;
             }
         }
 
-        // Randomly remove some walls to create passages
-        java.util.Random rand = new java.util.Random();
-        for (int i = 1; i < height - 2; i += 2) {
-            for (int j = 1; j < width - 2; j += 2) {
-                if (rand.nextBoolean()) board[i][j + 1] = CellTypes.FOOD;
-                if (rand.nextBoolean()) board[i + 1][j] = CellTypes.FOOD;
+        // Every second column, all rows
+        for (int j = 1; j < width - 1; j += 2) {
+            for (int i = 1; i < height - 1; i++) {
+                board[i][j] = CellTypes.FOOD;
             }
         }
 
@@ -42,32 +40,19 @@ public class CellModel {
         int centerRow = board.length / 2;
         int centerCol = board[0].length / 2;
 
-        pacman = new Pacman(centerRow, centerCol);
+        pacman = new Pacman(3, 3);
 
         // Placing Pacman on a empty board
-        if (board[centerRow][centerCol] == CellTypes.FOOD) {
-            board[centerRow][centerCol] = CellTypes.PACMAN;
-        } else {
-            // Find nearby EMPTY cell if center is occupied
-            occupied:
-            for (int r = centerRow - 1; r <= centerRow + 1; r++) {
-                for (int c = centerCol - 1; c <= centerCol + 1; c++) {
-                    if (board[r][c] == CellTypes.EMPTY) {
-                        board[r][c] = CellTypes.PACMAN;
-                        break occupied;
-                    }
-                }
-            }
-        }
+        board[3][3] = CellTypes.PACMAN;
 
         //Clearing ghosts from the board as they are doubling otherwise
         ghostbox.getGhosts().clear();
 
         // Placing ghosts on a empty board
-        BasicGhost ghost1 = new BasicGhost(2, 2);
-        BasicGhost ghost2 = new BasicGhost(10, 3);
-        BasicGhost ghost3 = new BasicGhost(13, 10);
-        BasicGhost ghost4 = new BasicGhost(20, 20);
+        BasicGhost ghost1 = new BasicGhost(centerRow+1, centerCol-1);
+        BasicGhost ghost2 = new BasicGhost(centerRow-1, centerCol+1);
+        BasicGhost ghost3 = new BasicGhost(centerRow-1, centerCol-1);
+        BasicGhost ghost4 = new BasicGhost(centerRow+1, centerCol+1);
         addGhost(ghost1);
         addGhost(ghost2);
         addGhost(ghost3);
@@ -95,7 +80,7 @@ public class CellModel {
         createBoard();
     }
 
-    public synchronized boolean movePacman(int dRow, int dCol) {
+    public boolean movePacman(int dRow, int dCol) {
         int currentRow = pacman.getRow();
         int currentCol = pacman.getColumn();
         int newRow = currentRow + dRow;
@@ -105,22 +90,12 @@ public class CellModel {
         if (board[newRow][newCol] == CellTypes.WALL) return false;
 
         if (board[newRow][newCol] == CellTypes.GHOST) {
-            lives--;
-            if (lives == 0) {
-                System.out.println("Game Over!");
-                System.exit(0);
-            }
-            return false;
+            removeLife();
         }
 
         if (board[newRow][newCol] == CellTypes.FOOD) {
             addPoints(10);
         }
-
-        if (board[newRow][newCol] == CellTypes.GHOST) {
-            removeLife();
-        }
-
 
         // Clear old Pacman position on board
         board[currentRow][currentCol] = CellTypes.EMPTY;
@@ -134,7 +109,7 @@ public class CellModel {
         return true;
     }
 
-    public synchronized boolean moveGhost(Ghost ghost, int dRow, int dCol) {
+    public boolean moveGhost(Ghost ghost, int dRow, int dCol) {
         int currentRow = ghost.getRow();
         int currentCol = ghost.getColumn();
         int newRow = currentRow + dRow;
@@ -142,6 +117,10 @@ public class CellModel {
 
         if (newRow < 0 || newCol < 0 || newRow >= board.length || newCol >= board[0].length) return false;
         if (board[newRow][newCol] == CellTypes.WALL || board[newRow][newCol] == CellTypes.GHOST) return false;
+
+        if (board[newRow][newCol] == CellTypes.PACMAN) {
+            removeLife();
+        }
 
         // Clear old Ghost position on board
         board[currentRow][currentCol] = CellTypes.EMPTY;
@@ -182,6 +161,5 @@ public class CellModel {
 
     public void removeLife() {
         this.lives -= 1;
-
     }
 }
