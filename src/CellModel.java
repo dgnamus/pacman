@@ -16,25 +16,36 @@ public class CellModel {
     private void createBoard() {
         int height = board.length;
         int width = board[0].length;
+        java.util.Random rand = new java.util.Random();
 
-        // I'm starting with walls
+        // 1. Fill entire board with WALL
         for (int i = 0; i < height; i++)
             for (int j = 0; j < width; j++)
                 board[i][j] = CellTypes.WALL;
 
-        // Every second row, all columns
-        for (int i = 1; i < height - 1; i += 2) {
-            for (int j = 1; j < width - 1; j++) {
-                board[i][j] = CellTypes.FOOD;
-            }
+        // 2. Carve out a random winding path from the center, using DFS
+        boolean[][] visited = new boolean[height][width];
+        int startRow = height / 2;
+        int startCol = width / 2;
+
+        dfsCarve(board, visited, startRow, startCol, rand);
+
+        // 3. Place FOOD on all EMPTY cells (except Pacman/ghosts)
+        for (int i = 1; i < height - 1; i++)
+            for (int j = 1; j < width - 1; j++)
+                if (board[i][j] == CellTypes.EMPTY)
+                    board[i][j] = CellTypes.FOOD;
+
+        // 4. Re-enforce border as WALL (just in case)
+        for (int i = 0; i < height; i++) {
+            board[i][0] = CellTypes.WALL;
+            board[i][width - 1] = CellTypes.WALL;
+        }
+        for (int j = 0; j < width; j++) {
+            board[0][j] = CellTypes.WALL;
+            board[height - 1][j] = CellTypes.WALL;
         }
 
-        // Every second column, all rows
-        for (int j = 1; j < width - 1; j += 2) {
-            for (int i = 1; i < height - 1; i++) {
-                board[i][j] = CellTypes.FOOD;
-            }
-        }
 
         // defining the middle of the board
         int centerRow = board.length / 2;
@@ -49,10 +60,10 @@ public class CellModel {
         ghostbox.getGhosts().clear();
 
         // Placing ghosts on a empty board
-        BasicGhost ghost1 = new BasicGhost(centerRow+1, centerCol-1);
-        BasicGhost ghost2 = new BasicGhost(centerRow-1, centerCol+1);
-        BasicGhost ghost3 = new BasicGhost(centerRow-1, centerCol-1);
-        BasicGhost ghost4 = new BasicGhost(centerRow+1, centerCol+1);
+        BasicGhost ghost1 = new BasicGhost(centerRow, centerCol);
+        BasicGhost ghost2 = new BasicGhost(centerRow, centerCol);
+        BasicGhost ghost3 = new BasicGhost(centerRow, centerCol);
+        BasicGhost ghost4 = new BasicGhost(centerRow, centerCol);
         addGhost(ghost1);
         addGhost(ghost2);
         addGhost(ghost3);
@@ -60,12 +71,16 @@ public class CellModel {
 
     }
 
-    public CellTypes[][] getBoard() {
-        return board;
+//    public CellTypes[][] getBoard() {
+//        return board;
+//    }
+
+    public int getBoardLength() {
+        return board.length;
     }
 
-    public int getSize() {
-        return board.length;
+    public int getBoardWidth() {
+        return board[0].length;
     }
 
     public CellTypes getCell(int row, int column) {
@@ -74,10 +89,6 @@ public class CellModel {
 
     public void setCell(int row, int column, CellTypes type) {
         board[row][column] = type;
-    }
-
-    public void reset() {
-        createBoard();
     }
 
     public boolean movePacman(int dRow, int dCol) {
@@ -161,5 +172,29 @@ public class CellModel {
 
     public void removeLife() {
         this.lives -= 1;
+    }
+
+    private void dfsCarve(CellTypes[][] board, boolean[][] visited, int row, int col, java.util.Random rand) {
+        int height = board.length;
+        int width = board[0].length;
+        int[] dRows = {0, 0, -1, 1}; // left, right, up, down
+        int[] dCols = {-1, 1, 0, 0};
+
+        visited[row][col] = true;
+        board[row][col] = CellTypes.EMPTY;
+
+        // Shuffle directions
+        Integer[] dirs = {0, 1, 2, 3};
+        java.util.Collections.shuffle(java.util.Arrays.asList(dirs), rand);
+
+        for (int dir : dirs) {
+            int newRow = row + dRows[dir] * 2; // Move two cells to carve passage
+            int newCol = col + dCols[dir] * 2;
+            if (newRow > 0 && newRow < height - 1 && newCol > 0 && newCol < width - 1 && !visited[newRow][newCol]) {
+                // Knock down wall between current and next cell
+                board[row + dRows[dir]][col + dCols[dir]] = CellTypes.EMPTY;
+                dfsCarve(board, visited, newRow, newCol, rand);
+            }
+        }
     }
 }

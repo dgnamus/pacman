@@ -9,12 +9,12 @@ public class MyBoardModel extends AbstractTableModel {
 
     @Override
     public int getRowCount() {
-        return cellmodel.getSize();
+        return cellmodel.getBoardLength();
     }
 
     @Override
     public int getColumnCount() {
-        return cellmodel.getSize();
+        return cellmodel.getBoardWidth();
     }
 
     @Override
