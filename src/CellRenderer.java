@@ -7,9 +7,13 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
     private final ImageIcon wallIcon;
     private final ImageIcon foodIcon;
     private final ImageIcon ghostIcon;
-    private final ImageIcon pacmanOpenIcon;
+    //private final ImageIcon pacmanOpenIcon;
+    private final ImageIcon upgradeIcon;
+    private final ImageIcon[] pacFrames = new ImageIcon[3];
+    private final PacManApp pacManApp;
 
-    public CellRenderer() {
+
+    public CellRenderer(PacManApp pacManApp) {
         setOpaque(true);
         setHorizontalAlignment(CENTER);
         setVerticalAlignment(CENTER);
@@ -17,7 +21,14 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
         wallIcon = loadIcon("./resources/wall.png");
         foodIcon = loadIcon("./resources/food.png");
         ghostIcon = loadIcon("./resources/ghost.png");
-        pacmanOpenIcon = loadIcon("./resources/pacman_open.png");
+        //pacmanOpenIcon = loadIcon("./resources/pacman_open.png");
+        pacFrames[0] = loadIcon("./resources/pacman1.png");
+        pacFrames[1] = loadIcon("./resources/pacman2.png");
+        pacFrames[2] = loadIcon("./resources/pacman3.png");
+
+        upgradeIcon = loadIcon("./resources/cherry.png");
+
+        this.pacManApp = pacManApp;
     }
 
     private ImageIcon loadIcon(String path) {
@@ -60,15 +71,26 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
                 }
                 case PACMAN -> {
                     setBackground(Color.LIGHT_GRAY);
-                    if (pacmanOpenIcon != null) {
-                        Image scaledImage = pacmanOpenIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                    int frame = pacManApp.getPacmanFrame();
+                    ImageIcon pacmanIcon = pacFrames[frame];
+                    if (pacmanIcon != null) {
+                        Image scaledImage = pacmanIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
                         setIcon(new ImageIcon(scaledImage));
                     }
                 }
                 case GHOST -> {
                     setBackground(Color.LIGHT_GRAY);
+                    setOpaque(true);
                     if (ghostIcon != null) {
                         Image scaledImage = ghostIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                        setIcon(new ImageIcon(scaledImage));
+                    }
+                }
+                case UPGRADE -> {
+                    setBackground(Color.LIGHT_GRAY);
+                    setOpaque(true);
+                    if (upgradeIcon != null) {
+                        Image scaledImage = upgradeIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
                         setIcon(new ImageIcon(scaledImage));
                     }
                 }

@@ -1,4 +1,5 @@
-import java.util.List;
+import java.awt.desktop.SystemEventListener;
+import java.util.*;
 
 public class CellModel {
 
@@ -7,16 +8,43 @@ public class CellModel {
     private GhostBox<Ghost> ghostbox = new GhostBox<>();
     private int lives = 3;
     private int points = 0;
+    private List<Upgrade> upgrades = new ArrayList<>();
+    private UpgradeListener upgradeListener;
 
     public CellModel(int rows, int columns) {
         board = new CellTypes[rows][columns];
         createBoard();
     }
 
+    public List<Upgrade> getUpgrades() {
+        return upgrades;
+    }
+
+    public void setUpgradeListener(UpgradeListener listener) {
+        this.upgradeListener = listener;
+    }
+
+    public void dropUpgrade() {
+        Random randInt = new Random();
+        int height = board.length;
+        int width = board[0].length;
+        int tries = height * width;
+        while (tries-- > 0) {
+            int row = randInt.nextInt(height);
+            int col = randInt.nextInt(width);
+            if (board[row][col] == CellTypes.EMPTY || board[row][col] == CellTypes.FOOD) {
+                UpgradeTypes upgradeType = UpgradeTypes.values()[randInt.nextInt(UpgradeTypes.values().length)];
+                upgrades.add(new Upgrade(upgradeType, row, col));
+                board[row][col] = CellTypes.UPGRADE;
+                break;
+            }
+        }
+    }
+
     private void createBoard() {
         int height = board.length;
         int width = board[0].length;
-        java.util.Random rand = new java.util.Random();
+        Random rand = new Random();
 
         // 1. Fill entire board with WALL
         for (int i = 0; i < height; i++)
@@ -108,6 +136,20 @@ public class CellModel {
             addPoints(10);
         }
 
+        if (board[newRow][newCol] == CellTypes.UPGRADE) {
+            Upgrade picked = null;
+            for (Upgrade upgrade : upgrades) {
+                if (upgrade.getRow() == newRow && upgrade.getColumn() == newCol) {
+                    picked = upgrade;
+                    break;
+                }
+            }
+            if (picked != null) {
+                applyUpgrade(picked.getUpgradeType());
+            }
+            board[newRow][newCol] = CellTypes.EMPTY;
+        }
+
         // Clear old Pacman position on board
         board[currentRow][currentCol] = CellTypes.EMPTY;
 
@@ -118,6 +160,37 @@ public class CellModel {
         board[pacman.getRow()][pacman.getColumn()] = CellTypes.PACMAN;
 
         return true;
+    }
+
+    private void applyUpgrade(UpgradeTypes upgradeType) {
+        switch (upgradeType) {
+            case SPEED:
+                // double pacman speed
+                if (upgradeListener != null) {
+                    upgradeListener.onUpgradePicked(UpgradeTypes.SPEED);
+                }
+                break;
+            case LIFE:
+                // add 1 extra life
+                //addLife();
+                System.out.println("Add 1 life");
+                break;
+            case DOUBLE_POINTS:
+                // double the current amount of points
+                //doublePoints();
+                System.out.println("Double the points");
+                break;
+            case GET_POINTS:
+                // get random amount of point between 100 and 500
+                //addPoints();
+                System.out.println("Get random amount of points");
+                break;
+            case REMOVE_GHOST:
+                // remove 1 ghost from the board
+                //removeGhost();
+                System.out.println("Remove 1 ghost");
+                break;
+        }
     }
 
     public boolean moveGhost(Ghost ghost, int dRow, int dCol) {
@@ -174,7 +247,7 @@ public class CellModel {
         this.lives -= 1;
     }
 
-    private void dfsCarve(CellTypes[][] board, boolean[][] visited, int row, int col, java.util.Random rand) {
+    private void dfsCarve(CellTypes[][] board, boolean[][] visited, int row, int col, Random rand) {
         int height = board.length;
         int width = board[0].length;
         int[] dRows = {0, 0, -1, 1}; // left, right, up, down
@@ -185,7 +258,7 @@ public class CellModel {
 
         // Shuffle directions
         Integer[] dirs = {0, 1, 2, 3};
-        java.util.Collections.shuffle(java.util.Arrays.asList(dirs), rand);
+        Collections.shuffle(Arrays.asList(dirs), rand);
 
         for (int dir : dirs) {
             int newRow = row + dRows[dir] * 2; // Move two cells to carve passage

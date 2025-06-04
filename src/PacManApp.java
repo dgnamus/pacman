@@ -1,25 +1,27 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.Arrays;
 
-public class PacApp extends JFrame {
+public class PacManApp extends JFrame {
 
     private CellModel cellModel;
     private MyBoardModel boardModel;
     private JTable table;
     private Thread pacmanThread;
     private Thread ghostThread;
+    private Thread upgradeThread;
     private JLabel scoreLabel = new JLabel("Score: 0");
     private JLabel livesLabel = new JLabel("Lives: 3");
     private volatile Direction pacmanDirection = Direction.NONE;
     private volatile boolean isGameOver = false;
+    private volatile boolean upgradeThreadRunning = false;
+    private volatile int pacmanFrame = 0;
+    private volatile boolean pacmanOpeningMouth = true;
+    private volatile int pacmanSpeed = 500;
     private final Leaderboard leaderboard = new Leaderboard();
 
-
-
-    public PacApp() {
+    public PacManApp() {
         this.cellModel = new CellModel(100, 100); // board size
         this.boardModel = new MyBoardModel(cellModel);
 
@@ -61,7 +63,7 @@ public class PacApp extends JFrame {
         table = new JTable();
         table.setModel(boardModel);
         table.setRowHeight(30);
-        table.setDefaultRenderer(Object.class, new CellRenderer());
+        table.setDefaultRenderer(Object.class, new CellRenderer(this));
         table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
         for (int i = 0; i < table.getColumnCount(); i++) {
@@ -132,6 +134,12 @@ public class PacApp extends JFrame {
             int rows = getBoardRows("0");
             int columns = getBoardColumns("0");
             cellModel = new CellModel(rows, columns);
+            cellModel.setUpgradeListener(upgradeType -> {
+                if (upgradeType == UpgradeTypes.SPEED) {
+                    increasePacmanSpeed();
+                }
+            });
+
             boardModel = new MyBoardModel(cellModel);
             table.setModel(boardModel);
 
@@ -145,14 +153,19 @@ public class PacApp extends JFrame {
             if (ghostThread != null && ghostThread.isAlive()) {
                 ghostThread.interrupt();
             }
+            if (upgradeThread != null && upgradeThread.isAlive()) {
+                stopUpgradeThread();
+            }
 
             pacmanThread = new Thread(this::movePacmanThread);
             ghostThread = new Thread(this::moveGhostThread);
-            PacApp.this.requestFocusInWindow();
+            startUpgradeThread();
+            PacManApp.this.requestFocusInWindow();
             pacmanThread.setDaemon(true);
             ghostThread.setDaemon(true);
             pacmanThread.start();
             ghostThread.start();
+
         });
 
         // Direction action listeners
@@ -172,7 +185,7 @@ public class PacApp extends JFrame {
     private void movePacmanThread() {
         while (!Thread.currentThread().isInterrupted() && !isGameOver) {
             try {
-                Thread.sleep(500);
+                Thread.sleep(pacmanSpeed);
                 if (pacmanDirection != Direction.NONE) {
                     boolean moved = false;
                     switch (pacmanDirection) {
@@ -182,6 +195,17 @@ public class PacApp extends JFrame {
                         case RIGHT -> moved = cellModel.movePacman(0, 1);
                     }
                     if (moved) {
+                        if (pacmanOpeningMouth) {
+                            pacmanFrame++;
+                            if (pacmanFrame == 2) {
+                                pacmanOpeningMouth = false;
+                            }
+                        } else {
+                            pacmanFrame--;
+                            if (pacmanFrame == 0) {
+                                pacmanOpeningMouth = true;
+                            }
+                        }
                         SwingUtilities.invokeLater(() -> {
                             boardModel.fireTableDataChanged();
                             scoreLabel.setText("Score: " + cellModel.getPoints());
@@ -229,10 +253,39 @@ public class PacApp extends JFrame {
         }
     }
 
+    private void startUpgradeThread() {
+        upgradeThreadRunning = true;
+        upgradeThread = new Thread(() -> {
+            java.util.Random randInt = new java.util.Random();
+            while (upgradeThreadRunning && !isGameOver) {
+                try {
+                    Thread.sleep(5000);
+                    // create 25% chance for upgrade to appear
+                    if (randInt.nextInt(4) == 0) {
+                        cellModel.dropUpgrade();
+                        SwingUtilities.invokeLater(() -> boardModel.fireTableDataChanged());
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        upgradeThread.setDaemon(true);
+        upgradeThread.start();
+    }
+
+    private void stopUpgradeThread() {
+        upgradeThreadRunning = false;
+        if (upgradeThread != null) {
+            upgradeThread.interrupt();
+        }
+    }
+
     private void gameOver() {
         if (isGameOver) return;
 
         isGameOver = true;
+        startUpgradeThread();
         pacmanDirection = Direction.NONE;
         JOptionPane.showMessageDialog(this, "Game Over! Press New Game to restart. Your score: " + cellModel.getPoints(), "Game Over", JOptionPane.INFORMATION_MESSAGE);
 
@@ -251,6 +304,22 @@ public class PacApp extends JFrame {
             stringBuilder.append(i + 1).append(". ").append(score.getPlayerName()).append(": ").append(score.getHighScore()).append("\n");
         }
         JOptionPane.showMessageDialog(this, stringBuilder.toString(), "High Scores", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public void increasePacmanSpeed() {
+        pacmanSpeed = 250;
+        new Thread(() -> {
+            try {
+                Thread.sleep(10000);
+                pacmanSpeed = 500;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+    }
+
+    public int getPacmanFrame() {
+        return pacmanFrame;
     }
 
     private enum Direction {
