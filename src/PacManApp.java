@@ -8,21 +8,31 @@ public class PacManApp extends JFrame {
     private CellModel cellModel;
     private MyBoardModel boardModel;
     private JTable table;
+    private final JLabel scoreLabel = new JLabel("Score: 0");
+    private final JLabel timerLabel = new JLabel("Timer: 0");
+    private final JLabel bonusLabel = new JLabel("");
     private Thread pacmanThread;
     private Thread ghostThread;
     private Thread upgradeThread;
-    private JLabel scoreLabel = new JLabel("Score: 0");
-    private JLabel livesLabel = new JLabel("Lives: 3");
+    private Thread timerThread;
+    private Thread pacmanEatingThread;
+
+    private Hearts hearts;
     private volatile Direction pacmanDirection = Direction.NONE;
     private volatile boolean isGameOver = false;
     private volatile boolean upgradeThreadRunning = false;
-    private volatile int pacmanFrame = 0;
+    private int pacmanFrame = 0;
     private volatile boolean pacmanOpeningMouth = true;
+    private volatile boolean pacmanEating = false;
     private volatile int pacmanSpeed = 500;
+    private int timer = 0;
+    private volatile boolean timerRunning = false;
     private final Leaderboard leaderboard = new Leaderboard();
+    private JScrollPane scrollPane;
+
 
     public PacManApp() {
-        this.cellModel = new CellModel(100, 100); // board size
+        this.cellModel = new CellModel(15, 15); // board size
         this.boardModel = new MyBoardModel(cellModel);
 
         generateFrame();
@@ -67,45 +77,79 @@ public class PacManApp extends JFrame {
         table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
         for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setPreferredWidth(25);
+            table.getColumnModel().getColumn(i).setPreferredWidth(30);
         }
 
-        table.addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentResized(java.awt.event.ComponentEvent e) {
-                int newRowHeight = Math.max(10, table.getHeight() / table.getRowCount());
-                table.setRowHeight(newRowHeight);
-            }
-        });
-
-        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane = new JScrollPane(table);
         table.setTableHeader(null);
 
-        // creating buttons
+        // creating buttons and adding some styles
         JButton newGame = new JButton("New Game");
+        newGame.setFont(new Font("Monospace", Font.BOLD, 18));
+        newGame.setOpaque(true);
+        newGame.setBackground(Color.yellow);
+        newGame.setBorderPainted(false);
         JButton highScores = new JButton("High Scores");
+        highScores.setFont(new Font("Monospace", Font.PLAIN, 18));
+        highScores.setOpaque(true);
+        highScores.setBackground(Color.yellow);
+        highScores.setBorderPainted(false);
         JButton exit = new JButton("Exit");
+        exit.setFont(new Font("Monospace", Font.ITALIC, 18));
+        exit.setOpaque(true);
+        exit.setBackground(Color.yellow);
+        exit.setBorderPainted(false);
 
         // wrapping buttons into a menu
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttons.add(newGame);
         buttons.add(highScores);
         buttons.add(exit);
+        buttons.setBackground(Color.pink);
+        JScrollPane buttonsScrollPane = new JScrollPane(buttons);
 
-        // wrapping game data
-        JPanel gameData = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        gameData.add(scoreLabel);
-        gameData.add(livesLabel);
+        // creating bottom row game data
+        JPanel gameDataFirstRow = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JPanel gameDataSecondRow = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JPanel gameDataThirdRow = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JPanel gameDataFourthRow = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
-        // finalizing layour of the game
+        hearts = new Hearts(cellModel.getLives());
+        JLabel exitInstruction = new JLabel("Press ctrl+shift+Q to exit  ");
+        exitInstruction.setFont(new Font("Monospace", Font.ITALIC, 14));
+        scoreLabel.setFont(new Font("Monospace", Font.BOLD, 14));
+        bonusLabel.setFont(new Font("Monospace", Font.BOLD, 16));
+
+        gameDataFirstRow.add(exitInstruction);
+        gameDataSecondRow.add(scoreLabel);
+        gameDataSecondRow.add(hearts);
+        gameDataThirdRow.add(timerLabel);
+        gameDataFourthRow.add(bonusLabel);
+        gameDataFirstRow.setBackground(Color.pink);
+        gameDataSecondRow.setBackground(Color.pink);
+        gameDataThirdRow.setBackground(Color.pink);
+        gameDataFourthRow.setBackground(Color.pink);
+
+
+        JPanel gameData = new JPanel(new GridLayout(4, 1));
+        gameData.add(gameDataFirstRow);
+        gameData.add(gameDataSecondRow);
+        gameData.add(gameDataThirdRow);
+        gameData.add(gameDataFourthRow);
+        gameData.setBackground(Color.pink);
+        JScrollPane gameDataScrollPanel = new JScrollPane(gameData);
+
+
+        // finalizing layout of the game
         setFocusable(true);
         setLayout(new BorderLayout());
-        add(buttons, BorderLayout.NORTH);
+        add(buttonsScrollPane, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
-        add(gameData, BorderLayout.SOUTH);
+        add(gameDataScrollPanel, BorderLayout.SOUTH);
 
-        pack();
-        //boardModel.fireTableDataChanged();
+        // part to get window size to adjust properly
+        resizeWindow();
+
         setVisible(true);
         setLocationRelativeTo(null);
         requestFocusInWindow();
@@ -124,17 +168,18 @@ public class PacManApp extends JFrame {
         });
 
         // Action listeners for new game,  exit and leaderboard buttons
-        exit.addActionListener(e -> System.exit(0));
+        exit.addActionListener(_ -> System.exit(0));
 
-        highScores.addActionListener(e -> showHighScores());
+        highScores.addActionListener(_ -> showHighScores());
 
-        newGame.addActionListener(e -> {
+        newGame.addActionListener(_ -> {
             isGameOver = false;
 
             int rows = getBoardRows("0");
             int columns = getBoardColumns("0");
             cellModel = new CellModel(rows, columns);
             cellModel.setUpgradeListener(upgradeType -> {
+                showBonus(getBonusText(upgradeType));
                 if (upgradeType == UpgradeTypes.SPEED) {
                     increasePacmanSpeed();
                 }
@@ -143,6 +188,7 @@ public class PacManApp extends JFrame {
             boardModel = new MyBoardModel(cellModel);
             table.setModel(boardModel);
 
+            resizeWindow();
 
             scoreLabel.setText("Score: 0");
             pacmanDirection = Direction.NONE;
@@ -160,12 +206,13 @@ public class PacManApp extends JFrame {
             pacmanThread = new Thread(this::movePacmanThread);
             ghostThread = new Thread(this::moveGhostThread);
             startUpgradeThread();
+            startTimer();
+            startPacmanEatingThread();
             PacManApp.this.requestFocusInWindow();
             pacmanThread.setDaemon(true);
             ghostThread.setDaemon(true);
             pacmanThread.start();
             ghostThread.start();
-
         });
 
         // Direction action listeners
@@ -182,6 +229,30 @@ public class PacManApp extends JFrame {
         });
     }
 
+    public void resizeWindow() {
+        int cellSize = 30;
+        int topMenuHeight = 120;
+        int bottomMenuHeight = 120;
+
+        int newWidth = table.getColumnCount() * cellSize;
+        int newHeight = table.getRowCount() * cellSize + topMenuHeight + bottomMenuHeight;
+
+        // part to solve the issue when it would go over the screen size
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        newWidth = Math.min(newWidth, screenSize.width);
+        newHeight = Math.min(newHeight, screenSize.height);
+
+        //preferred size for scrollable
+        scrollPane.setPreferredSize(new Dimension(newWidth, newHeight));
+
+        // preferred size for frame
+        setPreferredSize(new Dimension(newWidth, newHeight));
+        pack();
+        Dimension maximumSize = getPreferredSize();
+        setMaximumSize(maximumSize);
+        setLocationRelativeTo(null);
+    }
+
     private void movePacmanThread() {
         while (!Thread.currentThread().isInterrupted() && !isGameOver) {
             try {
@@ -195,21 +266,11 @@ public class PacManApp extends JFrame {
                         case RIGHT -> moved = cellModel.movePacman(0, 1);
                     }
                     if (moved) {
-                        if (pacmanOpeningMouth) {
-                            pacmanFrame++;
-                            if (pacmanFrame == 2) {
-                                pacmanOpeningMouth = false;
-                            }
-                        } else {
-                            pacmanFrame--;
-                            if (pacmanFrame == 0) {
-                                pacmanOpeningMouth = true;
-                            }
-                        }
                         SwingUtilities.invokeLater(() -> {
                             boardModel.fireTableDataChanged();
                             scoreLabel.setText("Score: " + cellModel.getPoints());
-                            livesLabel.setText("Lives: " + cellModel.getLives());
+                            //livesLabel.setText("Lives: " + cellModel.getLives());
+                            hearts.updateHearts(cellModel.getLives());
                         });
                     }
                 }
@@ -219,6 +280,69 @@ public class PacManApp extends JFrame {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+        }
+    }
+
+    private void startPacmanEatingThread() {
+        pacmanEating = true;
+        pacmanEatingThread = new Thread(() -> {
+           while (pacmanEating && !isGameOver) {
+               try {
+                   Thread.sleep(300);
+                   if (pacmanDirection != Direction.NONE) {
+                       if (pacmanOpeningMouth) {
+                           pacmanFrame++;
+                           if (pacmanFrame == 2) {
+                               pacmanOpeningMouth = false;
+                           }
+                       } else {
+                           pacmanFrame--;
+                           if (pacmanFrame == 0) {
+                               pacmanOpeningMouth = true;
+                           }
+                       }
+                   }
+                   SwingUtilities.invokeLater(() -> boardModel.fireTableDataChanged());
+               } catch (InterruptedException e) {
+                   Thread.currentThread().interrupt();
+               }
+           }
+        });
+        pacmanEatingThread.setDaemon(true);
+        pacmanEatingThread.start();
+    }
+
+    private void stopPacmanEatingThread() {
+        pacmanEating = false;
+        if (pacmanEatingThread != null) {
+            pacmanEatingThread.interrupt();
+        }
+    }
+
+    private void startTimer() {
+        timerRunning = true;
+        timerLabel.setText("Time: 0");
+        timerThread = new Thread(() -> {
+            while (timerRunning) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                if (timerRunning) {
+                    timer++;
+                    SwingUtilities.invokeLater(() -> timerLabel.setText("Time: " + timer));
+                }
+            }
+        });
+        timerThread.setDaemon(true);
+        timerThread.start();
+    }
+
+    private void stopTimer() {
+        timerRunning = false;
+        if (timerThread != null) {
+            timerThread.interrupt();
         }
     }
 
@@ -236,6 +360,7 @@ public class PacManApp extends JFrame {
                 for (Ghost ghost : cellModel.getGhosts()) {
                     if (ghost.move(cellModel)) {
                         ghostMoved = true;
+
                     }
                 }
 
@@ -281,12 +406,37 @@ public class PacManApp extends JFrame {
         }
     }
 
+    public void showBonus(String text) {
+        SwingUtilities.invokeLater(() -> {
+            bonusLabel.setText(text);
+            bonusLabel.revalidate();
+            bonusLabel.repaint();
+        });
+        new Thread(() -> {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            SwingUtilities.invokeLater(() -> {
+                if (bonusLabel.getText().equals(text)) {
+                    bonusLabel.setText("");
+                    bonusLabel.revalidate();
+                    bonusLabel.repaint();
+                }
+            });
+        }).start();
+    }
+
     private void gameOver() {
         if (isGameOver) return;
 
         isGameOver = true;
-        startUpgradeThread();
+        stopUpgradeThread();
+        stopTimer();
+        stopPacmanEatingThread();
         pacmanDirection = Direction.NONE;
+        hearts.updateHearts(cellModel.getLives());
         JOptionPane.showMessageDialog(this, "Game Over! Press New Game to restart. Your score: " + cellModel.getPoints(), "Game Over", JOptionPane.INFORMATION_MESSAGE);
 
         String name = JOptionPane.showInputDialog(this,"Enter your name for the leaderboard","Game Over", JOptionPane.PLAIN_MESSAGE);
@@ -297,13 +447,8 @@ public class PacManApp extends JFrame {
     }
 
     private void showHighScores() {
-        java.util.List<HighScore> scores = leaderboard.getScores();
-        StringBuilder stringBuilder = new StringBuilder("High Scores:\n");
-        for (int i = 0; i < scores.size(); i++) {
-            HighScore score = scores.get(i);
-            stringBuilder.append(i + 1).append(". ").append(score.getPlayerName()).append(": ").append(score.getHighScore()).append("\n");
-        }
-        JOptionPane.showMessageDialog(this, stringBuilder.toString(), "High Scores", JOptionPane.INFORMATION_MESSAGE);
+       java.util.List<HighScore> highScores = leaderboard.getScores();
+       SwingUtilities.invokeLater(() -> new LeaderBoardWindow(highScores).setVisible(true));
     }
 
     public void increasePacmanSpeed() {
@@ -320,6 +465,16 @@ public class PacManApp extends JFrame {
 
     public int getPacmanFrame() {
         return pacmanFrame;
+    }
+
+    private String getBonusText(UpgradeTypes upgradeType) {
+        return switch (upgradeType) {
+            case SPEED -> "Speed Up!";
+            case LIFE -> "Extra Life!";
+            case IMMORTAL -> "Immortal!";
+            case GET_POINTS -> "Bonus Points!";
+            case REMOVE_GHOST -> "Ghost Removed!";
+        };
     }
 
     private enum Direction {

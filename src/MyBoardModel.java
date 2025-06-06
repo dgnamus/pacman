@@ -1,7 +1,7 @@
 import javax.swing.table.AbstractTableModel;
 
 public class MyBoardModel extends AbstractTableModel {
-    private CellModel cellmodel;
+    private final CellModel cellmodel;
 
     public MyBoardModel(CellModel cellmodel) {
         this.cellmodel = cellmodel;

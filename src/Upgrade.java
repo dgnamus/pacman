@@ -1,7 +1,7 @@
 public class Upgrade {
-    private UpgradeTypes upgradeType;
-    private int row;
-    private int column;
+    private final UpgradeTypes upgradeType;
+    private final int row;
+    private final int column;
 
     public Upgrade(UpgradeTypes upgradeType, int row, int column) {
         this.upgradeType = upgradeType;
@@ -20,36 +20,4 @@ public class Upgrade {
     public int getColumn() {
         return column;
     }
-
-    public void setRow(int row) {
-        this.row = row;
-    }
-
-    public void setColumn(int column) {
-        this.column = column;
-    }
-
-    public void setUpgradeType(UpgradeTypes upgradeType) {
-        this.upgradeType = upgradeType;
-    }
-
-//    public void applyUpgrade(Pacman pacman, CellModel cellModel) {
-//        switch (upgradeType) {
-//            case ADD_LIFE:
-//                cellModel.addLife();
-//                break;
-//            case ADD_SCORE:
-//                cellModel.addScore(10);
-//                break;
-//            case REMOVE_GHOST:
-//                cellModel.freezeGhosts();
-//                break;
-//            case EXTRA_LIFE:
-//                cellModel.addLife();
-//                break;
-//            case GHOST_TO_PACMAN:
-//                cellModel.ghostToPacman();
-//                break;
-//        }
-//    }
 }

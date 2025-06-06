@@ -25,6 +25,7 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
         pacFrames[0] = loadIcon("./resources/pacman1.png");
         pacFrames[1] = loadIcon("./resources/pacman2.png");
         pacFrames[2] = loadIcon("./resources/pacman3.png");
+        //pacFrames[3] = loadIcon("./resources/pacman4.png");
 
         upgradeIcon = loadIcon("./resources/cherry.png");
 
@@ -53,24 +54,21 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
         if (type instanceof CellTypes cellType) {
             switch (cellType) {
                 case WALL -> {
-                    setBackground(Color.BLACK);
+                    setBackground(Color.blue);
                     if (wallIcon != null) {
                         Image scaledImage = wallIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
                         setIcon(new ImageIcon(scaledImage));
                     }
                 }
-                case EMPTY -> {
-                    setBackground(Color.LIGHT_GRAY);
-                }
                 case FOOD -> {
-                    setBackground(Color.LIGHT_GRAY);
+                    setBackground(Color.black);
                     if (foodIcon != null) {
-                        Image scaledImage = foodIcon.getImage().getScaledInstance(5, 5, Image.SCALE_SMOOTH);
+                        Image scaledImage = foodIcon.getImage().getScaledInstance(10, 10, Image.SCALE_SMOOTH);
                         setIcon(new ImageIcon(scaledImage));
                     }
                 }
                 case PACMAN -> {
-                    setBackground(Color.LIGHT_GRAY);
+                    setBackground(Color.black);
                     int frame = pacManApp.getPacmanFrame();
                     ImageIcon pacmanIcon = pacFrames[frame];
                     if (pacmanIcon != null) {
@@ -79,7 +77,7 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
                     }
                 }
                 case GHOST -> {
-                    setBackground(Color.LIGHT_GRAY);
+                    setBackground(Color.black);
                     setOpaque(true);
                     if (ghostIcon != null) {
                         Image scaledImage = ghostIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
@@ -87,14 +85,14 @@ public class CellRenderer extends JLabel implements TableCellRenderer {
                     }
                 }
                 case UPGRADE -> {
-                    setBackground(Color.LIGHT_GRAY);
+                    setBackground(Color.black);
                     setOpaque(true);
                     if (upgradeIcon != null) {
                         Image scaledImage = upgradeIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
                         setIcon(new ImageIcon(scaledImage));
                     }
                 }
-                default -> setBackground(Color.PINK);
+                default -> setBackground(Color.black);
             }
         } else {
             setBackground(Color.RED);

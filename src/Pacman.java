@@ -30,5 +30,10 @@ public class Pacman {
         column = newCol;
         board[row][column] = CellTypes.PACMAN; // set new position
     }
+
+    public void setPacmanPosition(int newRow, int newCol) {
+        this.row = newRow;
+        this.column = newCol;
+    }
 }
 

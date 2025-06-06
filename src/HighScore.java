@@ -1,8 +1,8 @@
 import java.io.Serializable;
 
 public class HighScore implements Serializable {
-    private String playerName;
-    private int highScore;
+    private final String playerName;
+    private final int highScore;
 
     public HighScore(String playerName, int highScore) {
         this.playerName = playerName;
